@@ -1,0 +1,56 @@
+name: CI/CD Cloud Deploy
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      MEXC_API_KEY_ACCESS: ${{ secrets.MEXC_API_KEY_ACCESS }}
+      MEXC_API_KEY_SECRET: ${{ secrets.MEXC_API_KEY_SECRET }}
+      COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
+      COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Build Docker image
+        run: |
+          docker build -t mexc_pair_analysis .
+      - name: Push & Deploy to Render
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: |
+          curl -fsSL https://cli.render.com/install.sh | bash
+          render services deploy --from-docker --service-name mexc-pair-analysis --token $RENDER_API_TOKEN || echo "RENDER_FAIL"
+      - name: Fallback Deploy to Heroku (if Render fails)
+        if: failure()
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
+          heroku create mexc-pair-analysis || true
+          docker tag mexc_pair_analysis registry.heroku.com/mexc-pair-analysis/web
+          docker push registry.heroku.com/mexc-pair-analysis/web
+          heroku container:release web -a mexc-pair-analysis
+      - name: Health Check
+        run: |
+          sleep 30
+          curl -sf https://mexc-pair-analysis.onrender.com/pairs || curl -sf https://mexc-pair-analysis.herokuapp.com/pairs
+          curl -sf -X POST -H 'Content-Type: application/json' -d '{"base":"BTCUSDT"}' https://mexc-pair-analysis.onrender.com/analyze || curl -sf -X POST -H 'Content-Type: application/json' -d '{"base":"BTCUSDT"}' https://mexc-pair-analysis.herokuapp.com/analyze
+      - name: On Failure: Collect Logs & Open Issue
+        if: failure()
+        run: |
+          echo "Deployment failed. Check logs and fix."

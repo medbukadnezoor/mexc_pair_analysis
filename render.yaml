@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: mexc-pair-analysis
+    env: docker
+    plan: starter
+    autoDeploy: true
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: MEXC_API_KEY_ACCESS
+        sync: false
+      - key: MEXC_API_KEY_SECRET
+        sync: false
+      - key: COINMARKETCAP_API_KEY
+        sync: false
+      - key: COINGECKO_API_KEY
+        sync: false
+    healthCheckPath: /health
