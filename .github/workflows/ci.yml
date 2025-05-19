@@ -36,7 +36,7 @@ jobs:
           curl -fsSL https://cli.render.com/install.sh | bash
           render services deploy --from-docker --service-name mexc-pair-analysis --token $RENDER_API_TOKEN || echo "RENDER_FAIL"
       - name: Fallback Deploy to Heroku (if Render fails)
-        if: failure()
+        if: ${{ failure() }}
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
@@ -51,6 +51,6 @@ jobs:
           curl -sf https://mexc-pair-analysis.onrender.com/pairs || curl -sf https://mexc-pair-analysis.herokuapp.com/pairs
           curl -sf -X POST -H 'Content-Type: application/json' -d '{"base":"BTCUSDT"}' https://mexc-pair-analysis.onrender.com/analyze || curl -sf -X POST -H 'Content-Type: application/json' -d '{"base":"BTCUSDT"}' https://mexc-pair-analysis.herokuapp.com/analyze
       - name: On Failure: Collect Logs & Open Issue
-        if: failure()
+        if: ${{ failure() }}
         run: |
           echo "Deployment failed. Check logs and fix."
