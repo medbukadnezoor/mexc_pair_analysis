@@ -1,0 +1,22 @@
+{
+  "name": "mexc-pair-analysis",
+  "description": "MEXC Perpetual Pairs Analysis Web Application",
+  "env": {
+    "MEXC_API_KEY_ACCESS": {"required": true},
+    "MEXC_API_KEY_SECRET": {"required": true},
+    "COINMARKETCAP_API_KEY": {"required": true},
+    "COINGECKO_API_KEY": {"required": true}
+  },
+  "scripts": {
+    "postdeploy": "curl -sf https://$HEROKU_APP_NAME.herokuapp.com/pairs && curl -sf -X POST -H 'Content-Type: application/json' -d '{\"base\":\"BTCUSDT\"}' https://$HEROKU_APP_NAME.herokuapp.com/analyze"
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "free"
+    }
+  },
+  "buildpacks": [
+    {"url": "heroku/python"}
+  ]
+}
